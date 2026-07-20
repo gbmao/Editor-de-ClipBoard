@@ -2,6 +2,7 @@
   "name": "editor-de-clipboard",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
   "author": "Fadami",
   "description": "Frontend mínimo de bandeja para o Editor de Clipboard.",
   "main": "src/main.js",
