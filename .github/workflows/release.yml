@@ -40,7 +40,7 @@ jobs:
         run: pnpm run check
 
       - name: Build installer
-        run: pnpm run dist
+        run: pnpm run dist -- --publish never
 
       - name: Find installer
         id: installer
