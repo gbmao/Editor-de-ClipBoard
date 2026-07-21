@@ -59,22 +59,22 @@ Requisitos:
 - .NET SDK 8 ou superior
 - Windows
 
-Compilar:
-
-```bash
-dotnet build src/EditorDeClipboard/EditorDeClipboard.csproj -c Release
-```
-
 Rodar em desenvolvimento:
 
-```bash
-dotnet run --project src/EditorDeClipboard/EditorDeClipboard.csproj
+```powershell
+.\build.cmd run
+```
+
+Compilar:
+
+```powershell
+.\build.cmd build
 ```
 
 ## Publicar executavel leve
 
-```bash
-dotnet publish src/EditorDeClipboard/EditorDeClipboard.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o publish
+```powershell
+.\build.cmd
 ```
 
 O executavel sera criado em:
@@ -87,15 +87,19 @@ publish/EditorDeClipboard.exe
 
 O instalador usa Inno Setup.
 
-Depois de publicar o executavel em `publish/`, rode:
-
 ```powershell
-Push-Location installer
-iscc EditorDeClipboard.iss
-Pop-Location
+.\build.cmd installer
 ```
 
 O instalador sera criado na pasta `dist`.
+
+Para gerar uma versao que nao depende do .NET Desktop Runtime instalado na maquina, use:
+
+```powershell
+.\build.cmd publish -SelfContained
+```
+
+Essa versao fica maior.
 
 ## Publicar uma nova Release
 
@@ -129,6 +133,8 @@ Settings > Actions > General > Workflow permissions
 ## Estrutura
 
 ```text
+build.cmd                           atalho simples para compilar/publicar
+build.ps1                           script principal de build
 src/EditorDeClipboard/                 app Windows Forms
 installer/EditorDeClipboard.iss        instalador Inno Setup
 .github/workflows/release.yml          workflow para gerar instalador e Release
