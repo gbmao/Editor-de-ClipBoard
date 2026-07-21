@@ -2,6 +2,20 @@
 
 App simples para Windows que fica na bandeja do sistema e transforma rapidamente o texto atual do clipboard.
 
+Agora o app e feito em C# com Windows Forms, sem Electron. A publicacao leve gera um executavel de aproximadamente 163 KB, dependendo do ambiente de build.
+
+## Requisito
+
+Para manter o app pequeno, o instalador nao inclui o runtime do .NET.
+
+A maquina precisa ter o **.NET 8 Desktop Runtime** instalado.
+
+Download oficial:
+
+```text
+https://dotnet.microsoft.com/download/dotnet/8.0
+```
+
 ## Instalar
 
 Baixe o instalador mais recente na pagina de Releases do GitHub e execute o arquivo:
@@ -42,42 +56,46 @@ Exemplo de lista SQL:
 
 Requisitos:
 
-- Node.js
-- pnpm
+- .NET SDK 8 ou superior
+- Windows
 
-Instale as dependencias:
+Compilar:
 
 ```bash
-pnpm install
+dotnet build src/EditorDeClipboard/EditorDeClipboard.csproj -c Release
 ```
 
-Rode em desenvolvimento:
+Rodar em desenvolvimento:
 
 ```bash
-pnpm start
+dotnet run --project src/EditorDeClipboard/EditorDeClipboard.csproj
 ```
 
-Cheque a sintaxe:
+## Publicar executavel leve
 
 ```bash
-pnpm run check
+dotnet publish src/EditorDeClipboard/EditorDeClipboard.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o publish
+```
+
+O executavel sera criado em:
+
+```text
+publish/EditorDeClipboard.exe
 ```
 
 ## Gerar instalador local
 
-```bash
-pnpm run dist
+O instalador usa Inno Setup.
+
+Depois de publicar o executavel em `publish/`, rode:
+
+```powershell
+Push-Location installer
+iscc EditorDeClipboard.iss
+Pop-Location
 ```
 
 O instalador sera criado na pasta `dist`.
-
-## Gerar versao portable local
-
-```bash
-pnpm run portable
-```
-
-A versao portable tambem sera criada na pasta `dist`.
 
 ## Publicar uma nova Release
 
@@ -86,17 +104,19 @@ O instalador e gerado automaticamente pelo GitHub Actions quando uma tag com pre
 Exemplo:
 
 ```bash
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 O workflow `Build and Release` vai:
 
-- instalar as dependencias com `pnpm`
-- rodar `pnpm run check`
-- gerar o instalador Windows com `electron-builder`
+- instalar o .NET SDK
+- compilar o projeto em Release
+- publicar o executavel leve
+- instalar o Inno Setup
+- gerar o instalador Windows
 - criar uma Release no GitHub
-- anexar o `.exe` da instalacao nessa Release
+- anexar o `.exe` do instalador nessa Release
 
 Para rodar o build sem criar Release, use a aba `Actions` no GitHub e execute o workflow manualmente. Nesse caso, o instalador fica disponivel como artifact chamado `windows-installer`.
 
@@ -109,7 +129,7 @@ Settings > Actions > General > Workflow permissions
 ## Estrutura
 
 ```text
-src/main.js                     logica principal do app Electron
-.github/workflows/release.yml   workflow para gerar instalador e Release
-package.json                    scripts e configuracao do electron-builder
+src/EditorDeClipboard/                 app Windows Forms
+installer/EditorDeClipboard.iss        instalador Inno Setup
+.github/workflows/release.yml          workflow para gerar instalador e Release
 ```

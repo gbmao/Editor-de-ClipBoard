@@ -14,33 +14,53 @@ jobs:
     name: Build Windows installer
     runs-on: windows-latest
 
-    env:
-      CSC_IDENTITY_AUTO_DISCOVERY: "false"
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
         with:
-          version: 11.9.0
-          run_install: false
+          dotnet-version: 8.0.x
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
+      - name: Restore
+        run: dotnet restore src/EditorDeClipboard/EditorDeClipboard.csproj
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Build
+        run: dotnet build src/EditorDeClipboard/EditorDeClipboard.csproj --configuration Release --no-restore
 
-      - name: Check syntax
-        run: pnpm run check
+      - name: Publish lightweight app
+        run: >
+          dotnet publish src/EditorDeClipboard/EditorDeClipboard.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained false
+          -p:PublishSingleFile=true
+          -p:DebugType=none
+          -p:DebugSymbols=false
+          --output publish
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        run: |
+          if ("${{ github.ref_type }}" -eq "tag") {
+            $version = "${{ github.ref_name }}".TrimStart("v")
+          } else {
+            $version = "0.0.0-dev"
+          }
+
+          "value=$version" >> $env:GITHUB_OUTPUT
 
       - name: Build installer
-        run: pnpm exec electron-builder --win nsis --publish never
+        shell: pwsh
+        run: |
+          Push-Location installer
+          iscc "/DAppVersion=${{ steps.version.outputs.value }}" EditorDeClipboard.iss
+          Pop-Location
 
       - name: Find installer
         id: installer
