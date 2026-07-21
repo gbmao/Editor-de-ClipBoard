@@ -8,7 +8,10 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 {
     private const string AppName = "Editor de Clipboard";
     private const int ClipboardRetries = 8;
+    private const int MaxPath = 260;
     private const int RetryDelayMilliseconds = 80;
+    private const uint ShgsiIcon = 0x000000100;
+    private const uint ShgsiSmallIcon = 0x000000001;
     private static readonly string LineBreak = Environment.NewLine;
 
     private readonly ContextMenuStrip menu;
@@ -177,38 +180,60 @@ internal sealed partial class TrayApplicationContext : ApplicationContext
 
     private static Icon CreateTrayIcon()
     {
-        using var bitmap = new Bitmap(16, 16);
-        using var graphics = Graphics.FromImage(bitmap);
-        using var backgroundBrush = new SolidBrush(Color.FromArgb(24, 31, 42));
-        using var paperBrush = new SolidBrush(Color.FromArgb(245, 247, 250));
-        using var clipBrush = new SolidBrush(Color.FromArgb(37, 99, 235));
-        using var lineBrush = new SolidBrush(Color.FromArgb(20, 184, 166));
+        return GetStockIcon(ShStockIconId.Stack)
+            ?? GetStockIcon(ShStockIconId.DocAssociated)
+            ?? (Icon)SystemIcons.Application.Clone();
+    }
 
-        graphics.Clear(Color.Transparent);
-        graphics.FillRectangle(backgroundBrush, 3, 2, 10, 12);
-        graphics.FillRectangle(paperBrush, 4, 3, 8, 10);
-        graphics.FillRectangle(clipBrush, 6, 1, 4, 3);
-        graphics.FillRectangle(lineBrush, 5, 5, 6, 1);
-        graphics.FillRectangle(lineBrush, 5, 8, 6, 1);
-        graphics.FillRectangle(lineBrush, 5, 11, 4, 1);
+    private static Icon? GetStockIcon(ShStockIconId iconId)
+    {
+        var iconInfo = new ShStockIconInfo
+        {
+            cbSize = (uint)Marshal.SizeOf<ShStockIconInfo>(),
+        };
 
-        var handle = bitmap.GetHicon();
+        var result = SHGetStockIconInfo(iconId, ShgsiIcon | ShgsiSmallIcon, ref iconInfo);
+        if (result != 0 || iconInfo.hIcon == IntPtr.Zero)
+        {
+            return null;
+        }
 
         try
         {
-            return (Icon)Icon.FromHandle(handle).Clone();
+            return (Icon)Icon.FromHandle(iconInfo.hIcon).Clone();
         }
         finally
         {
-            DestroyIcon(handle);
+            DestroyIcon(iconInfo.hIcon);
         }
+    }
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct ShStockIconInfo
+    {
+        public uint cbSize;
+        public IntPtr hIcon;
+        public int iSysImageIndex;
+        public int iIcon;
+
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MaxPath)]
+        public string szPath;
     }
 
     [GeneratedRegex(@"[,\s]+")]
     private static partial Regex SeparatorRegex();
 
+    [DllImport("Shell32.dll")]
+    private static extern int SHGetStockIconInfo(ShStockIconId siid, uint uFlags, ref ShStockIconInfo psii);
+
     [DllImport("user32.dll", SetLastError = true)]
     private static extern bool DestroyIcon(IntPtr handle);
+
+    private enum ShStockIconId : uint
+    {
+        DocAssociated = 1,
+        Stack = 55,
+    }
 
     private enum ClipboardAction
     {

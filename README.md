@@ -28,6 +28,22 @@ O app nao abre janela. Depois de instalado, ele fica nos icones ocultos do Windo
 
 Observacao: o instalador ainda nao e assinado. O Windows pode mostrar um aviso de seguranca/SmartScreen na primeira execucao.
 
+## Abrir sem instalar
+
+Para abrir o app pelo codigo fonte, de dois cliques em:
+
+```text
+abrir.cmd
+```
+
+Se `publish/EditorDeClipboard.exe` ainda nao existir, esse script compila primeiro e depois abre o app.
+
+Se quiser abrir diretamente o executavel publicado:
+
+```text
+publish/EditorDeClipboard.exe
+```
+
 ## Acoes
 
 - `Colocar uma virgula no final de cada linha.`: separa os itens por linha e adiciona `,` ao fim de cada item, exceto o ultimo.

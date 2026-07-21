@@ -14,6 +14,30 @@ $PublishDir = Join-Path $Root "publish"
 $DistDir = Join-Path $Root "dist"
 $Runtime = "win-x64"
 
+function Invoke-Native {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    & $FilePath @Arguments
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "$FilePath falhou com codigo $LASTEXITCODE."
+    }
+}
+
+function Assert-AppIsNotRunning {
+    $processes = Get-Process EditorDeClipboard -ErrorAction SilentlyContinue
+    if ($processes) {
+        $ids = ($processes | Select-Object -ExpandProperty Id) -join ", "
+        throw "Feche o Editor de Clipboard antes de publicar. Processo em execucao: $ids"
+    }
+}
+
 function Get-AppVersion {
     $versionNode = Select-Xml `
         -Path $Project `
@@ -48,16 +72,25 @@ function Get-IsccPath {
 }
 
 function Publish-App {
+    Assert-AppIsNotRunning
+
     $selfContainedValue = if ($SelfContained) { "true" } else { "false" }
 
-    dotnet publish $Project `
-        --configuration Release `
-        --runtime $Runtime `
-        --self-contained $selfContainedValue `
-        -p:PublishSingleFile=true `
-        -p:DebugType=none `
-        -p:DebugSymbols=false `
-        --output $PublishDir
+    Invoke-Native "dotnet" @(
+        "publish",
+        $Project,
+        "--configuration",
+        "Release",
+        "--runtime",
+        $Runtime,
+        "--self-contained",
+        $selfContainedValue,
+        "-p:PublishSingleFile=true",
+        "-p:DebugType=none",
+        "-p:DebugSymbols=false",
+        "--output",
+        $PublishDir
+    )
 
     $exe = Join-Path $PublishDir "EditorDeClipboard.exe"
     $sizeKb = [Math]::Round((Get-Item -LiteralPath $exe).Length / 1KB, 2)
@@ -73,11 +106,11 @@ Push-Location $Root
 try {
     switch ($Target) {
         "run" {
-            dotnet run --project $Project
+            Invoke-Native "dotnet" @("run", "--project", $Project)
         }
 
         "build" {
-            dotnet build $Project --configuration Release
+            Invoke-Native "dotnet" @("build", $Project, "--configuration", "Release")
         }
 
         "publish" {
@@ -97,7 +130,7 @@ try {
             $version = Get-AppVersion
             Push-Location (Join-Path $Root "installer")
             try {
-                & $iscc "/DAppVersion=$version" "EditorDeClipboard.iss"
+                Invoke-Native $iscc @("/DAppVersion=$version", "EditorDeClipboard.iss")
             }
             finally {
                 Pop-Location
@@ -116,6 +149,10 @@ try {
             }
         }
     }
+}
+catch {
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    exit 1
 }
 finally {
     Pop-Location
